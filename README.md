@@ -36,7 +36,7 @@ The example below makes bots with tag abc green ,and tanks named abc red:
                         bot.KeyValueFromString(`rendercolor`, `0 255 0`)
                     },
                     // Called when the robot is killed
-					          // Params as in https://wiki.alliedmods.net/Team_Fortress_2_Events#mvm_tank_destroyed_by_players:~:text=they%20changed%20to-,player_death,-Note%3A%20When
+		    // Params as in https://wiki.alliedmods.net/Team_Fortress_2_Events#mvm_tank_destroyed_by_players:~:text=they%20changed%20to-,player_death,-Note%3A%20When
                     OnDeath = function(bot, params) {
                         ClientPrint(null, 2, `OnDeath`)
                         PrintTable(params)
