@@ -32,14 +32,11 @@ The example below makes bots with tag abc green ,and tanks named abc red:
                 AddRobotTag(`abc`, {
                     // Called when the robot is spawned
                     OnSpawn = function(bot, tag) {
-                        ClientPrint(null, 2, `OnSpawn`)
                         bot.KeyValueFromString(`rendercolor`, `0 255 0`)
                     },
                     // Called when the robot is killed
 		    // Params as in https://wiki.alliedmods.net/Team_Fortress_2_Events#mvm_tank_destroyed_by_players:~:text=they%20changed%20to-,player_death,-Note%3A%20When
                     OnDeath = function(bot, params) {
-                        ClientPrint(null, 2, `OnDeath`)
-                        PrintTable(params)
                         // Restore colors back to normal as necessary
                         bot.KeyValueFromString(`rendercolor`, `255 255 255`)
                     },
@@ -48,7 +45,6 @@ The example below makes bots with tag abc green ,and tanks named abc red:
                 AddTankName(`abc`, {
                     // Called when the tank is spawned
                     OnSpawn = function(tank, name) {
-                        ClientPrint(null, 2, `OnSpawnTank`);
                         tank.KeyValueFromString(`rendercolor`, `255 0 0`)
                     },
                 })
