@@ -7,6 +7,6 @@ Provides OnSpawn, OnDeath, OnTakeDamage, OnTakeDamagePost, OnDealDamage, OnDealD
 Provides OnSpawn, OnDeath, OnTakeDamage, OnTakeDamagePost hooks to spawned tanks with specified Name
 
 How to install:
-put popextensions.nut and popextensions_hooks.nut inside /tf/scripts/vscripts, create directories if necessary
+put scripts directory inside tf directory, merge if necessary
 
-mvm_bigrock_vscript.pop is a demonstrative popfile that makes use of all available hooks
+scripts/population/mvm_bigrock_vscript.pop is a demonstrative popfile that makes use of all available hooks
