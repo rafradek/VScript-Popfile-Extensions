@@ -10,3 +10,6 @@ How to install:
 put scripts directory inside tf directory, merge if necessary
 
 scripts/population/mvm_bigrock_vscript.pop is a demonstrative popfile that makes use of all available hooks
+
+## TODO
+Maybe a way to easily create point templates and spawn them on bots, if someone makes it would be welcome
