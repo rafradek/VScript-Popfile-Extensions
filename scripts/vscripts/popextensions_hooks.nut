@@ -5,24 +5,27 @@ function AddHooksToScope(name, table, scope)
 	foreach (hookName, func in table) {
 		// Entries in hook table must begin with 'On' to be considered hooks
 		if (hookName[0] == 'O' && hookName[1] == 'n') {
-			if (!("hooks"+hookName in scope)) {
-				scope["hooks"+hookName] <- [];
+			if (!("popHooks" in scope)) {
+				scope["popHooks"] <- {};
 			}
-			scope["hooks"+hookName].append(func);
+			if (!(hookName in scope.popHooks)) {
+				scope.popHooks[hookName] <- [];
+			}
+			scope.popHooks[hookName].append(func);
 		}
 	}
 }
 function FireHooks(entity, scope, name) {
-	if (scope != null && "hooks"+name in scope) {
-		foreach (index, func in scope["hooks"+name]) {
+	if (scope != null && "popHooks" in scope && name in scope.popHooks) {
+		foreach (index, func in scope.popHooks[name]) {
 			func(entity);
 		}
 	}
 }
 
 function FireHooksParam(entity, scope, name, param) {
-	if (scope != null && "hooks"+name in scope) {
-		foreach (index, func in scope["hooks"+name]) {
+	if (scope != null && "popHooks" in scope && name in scope.popHooks) {
+		foreach (index, func in scope.popHooks[name]) {
 			func(entity, param);
 		}
 	}
@@ -30,25 +33,53 @@ function FireHooksParam(entity, scope, name, param) {
 
 function PopulatorThink()
 {
+	//ClientPrint(null, 2 "pop think");
 	for (local tank = null; (tank = Entities.FindByClassname(tank, "tank_boss")) != null;) {
 		tank.ValidateScriptScope();
-		if (!("created" in tank.GetScriptScope())) {
-			tank.GetScriptScope().created <- true;
+		local scope = tank.GetScriptScope();
+		if (!("created" in scope)) {
+			scope.created <- true;
 			local tankName = tank.GetName();
-			foreach (name, table in tankNames) {
-				if (tankName == name) {
-					tank.ValidateScriptScope();
-					local scope = tank.GetScriptScope();
-					AddHooksToScope(name, table, scope);
+			foreach (name, table in tankNamesWildcard) {
+				if (name == tankName || name == tankName.slice(0, name.len())) {
+					AddHooksToScope(tankName, table, scope);
 
 					if ("OnSpawn" in table) {
-						table.OnSpawn(tank, name);
+						table.OnSpawn(tank, tankName);
+					}
+				}
+			}
+			if (tankName in tankNames) {
+				local table = tankNames[tankName];
+				AddHooksToScope(tankName, table, scope);
+
+				if ("OnSpawn" in table) {
+					table.OnSpawn(tank, tankName);
+				}
+			}
+		}
+	}
+	for (local i = 1; i <= Constants.Server.MAX_PLAYERS; i++)
+	{
+		local player = PlayerInstanceFromIndex(i);
+		if (player == null) continue;
+		if (player.IsBotOfType(1337) && NetProps.GetPropInt(player, "m_lifeState") == 0) {
+			player.ValidateScriptScope();
+			local scope = player.GetScriptScope();
+			if (!("botCreated" in scope)) {
+				scope.botCreated <- true;
+				foreach (tag, table in robotTags) {
+					if (player.HasBotTag(tag)) {
+						AddHooksToScope(tag, table, scope);
+						if ("OnSpawn" in table) {
+							table.OnSpawn(player, tag);
+						}
 					}
 				}
 			}
 		}
 	}
-	return 0.01;
+	return 0.00;
 }
 
 function OnScriptHook_OnTakeDamage(params)
@@ -69,16 +100,14 @@ function OnGameEvent_player_spawn(params)
 {
 	local player = GetPlayerFromUserID(params.userid);
 	if (player != null && player.IsBotOfType(1337)) {
-		foreach (tag, table in robotTags) {
-			if (player.HasBotTag(tag)) {
-				player.ValidateScriptScope();
-				local scope = player.GetScriptScope();
-				AddHooksToScope(tag, table, scope);
-
-				if ("OnSpawn" in table) {
-					table.OnSpawn(player, tag);
-				}
-			}
+		player.ValidateScriptScope();
+		local scope = player.GetScriptScope();
+		// Reset hooks
+		if ("botCreated" in scope) {
+			delete scope.botCreated;
+		}
+		if ("popHooks" in scope) {
+			delete scope.popHooks;
 		}
 	}
 }
@@ -125,4 +154,10 @@ function OnGameEvent_npc_hurt(params)
 	}
 }
 
+function OnGameEvent_mvm_begin_wave(params)
+{
+	if ("waveIconsFunction" in this) {
+		this.waveIconsFunction();
+	}
+}
 __CollectGameEventCallbacks(this);

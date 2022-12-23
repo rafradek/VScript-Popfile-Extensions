@@ -13,7 +13,7 @@ WaveSchedule
 		// Add or replace existing InitWaveOutput with code below
 		InitWaveOutput
 		{
-			Target gamerules //gamerules or tf_gamerules, depending on the map
+			Target gamerules // gamerules or tf_gamerules, depending on the map
 			Action RunScriptCode
 			Param "
 				// The original InitWaveOutput trigger, change if necessary
@@ -24,7 +24,7 @@ WaveSchedule
 
 				// If you are hitting the 4096 character limit inside this script, it would be required to put hooks into separate file
 				// IncludeScript(`mypophooks`)
-				// Add event hooks for bots with specifed Tag
+				// Add event hooks for bots with specifed Tag.
 				AddRobotTag(`abc`, {
 					// Called when the robot is spawned
 					OnSpawn = function(bot, tag) {
@@ -72,33 +72,6 @@ WaveSchedule
 						PrintTable(params)
 					},
 				})
-				// Add event hooks for tanks with specifed Name
-				AddTankName(`abc`, {
-					// Called when the tank is spawned
-					OnSpawn = function(tank, name) {
-						ClientPrint(null, 2, `OnSpawnTank`);
-						tank.KeyValueFromString(`rendercolor`, `255 0 0`)
-					},
-					// Called when the tank is destroyed
-					// Params as in https://wiki.alliedmods.net/Team_Fortress_2_Events#player_hurt:~:text=level-,npc_hurt,-Name%3A
-					OnDeath = function(tank, params) {
-						ClientPrint(null, 2, `OnDeathTank`)
-						PrintTable(params)
-					},
-					// Called when the tank takes damage
-					// Non const prefixed params when altered will affect the damage taken
-					// Params as in https://developer.valvesoftware.com/wiki/List_of_TF2_Script_Functions#:~:text=Description-,const_entity,-handle
-					OnTakeDamage = function(tank, params) {
-						ClientPrint(null, 2, `OnTakeDamageTank`)
-						PrintTable(params)
-					},
-					// Called when the robot takes damage, after the damage is dealt
-					// Params as in https://wiki.alliedmods.net/Team_Fortress_2_Events#player_hurt:~:text=level-,npc_hurt,-Name%3A
-					OnTakeDamagePost = function(tank, params) {
-						ClientPrint(null, 2, `OnTakeDamagePostTank`)
-						PrintTable(params)
-					},
-				})
 			"
 		}
 		StartWaveOutput
@@ -116,9 +89,9 @@ WaveSchedule
 
 			Name "Wave1"
 			Where spawnbot
-			TotalCount 22
-			MaxActive 22
-			SpawnCount 22
+			TotalCount 19
+			MaxActive 19
+			SpawnCount 19
 			WaitBeforeStarting 3
 			WaitBetweenSpawns 5
 			TotalCurrency 200
@@ -126,9 +99,68 @@ WaveSchedule
 			{
 				Tag abc
 				Class Soldier
-				WeaponRestrictions PrimaryOnly
+				WeaponRestrictions MeleeOnly
 			}
 		}
+	}
+	Wave
+	{
+		// Add or replace existing InitWaveOutput with code below
+		InitWaveOutput
+		{
+			Target gamerules // gamerules or tf_gamerules, depending on the map
+			Action RunScriptCode
+			Param "
+				// The original InitWaveOutput trigger, change if necessary
+				EntFire(`wave_init_relay`, `Trigger`)
+
+				// Load popextensions script
+				IncludeScript(`popextensions`)
+
+				// Set custom wave icons inside this function
+				SetWaveIconsFunction(function() {
+					// Use custom icon for a tank, first remove the regular tank icon
+					SetWaveIconSpawnCount(`tank`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 0)
+					// Add our custom tank icon
+					SetWaveIconSpawnCount(`tank_red`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1)
+				})
+
+				// Add event hooks for tanks with specifed Name, also supports wildcard suffix
+				AddTankName(`abc*`, {
+					// Called when the tank is spawned
+					OnSpawn = function(tank, name) {
+						// Create a prop on top of the tank
+						local prop = SpawnEntityFromTable(`prop_dynamic`, {model = `models/props_badlands/barrel01.mdl`, origin = `0 0 200`})
+						SetParentDirty(prop, tank)
+
+						ClientPrint(null, 2, `OnSpawnTank`)
+						tank.KeyValueFromString(`rendercolor`, `255 0 0`)
+					},
+					// Called when the tank is destroyed
+					// Params as in https://wiki.alliedmods.net/Team_Fortress_2_Events#player_hurt:~:text=level-,npc_hurt,-Name%3A
+					OnDeath = function(tank, params) {
+						ClientPrint(null, 2, `OnDeathTank`)
+						PrintTable(params)
+						// Decrement custom tank icon when killed.
+						DecrementWaveIconSpawnCount(`tank_red`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1)
+					},
+					// Called when the tank takes damage
+					// Non const prefixed params when altered will affect the damage taken
+					// Params as in https://developer.valvesoftware.com/wiki/List_of_TF2_Script_Functions#:~:text=Description-,const_entity,-handle
+					OnTakeDamage = function(tank, params) {
+						ClientPrint(null, 2, `OnTakeDamageTank`)
+						PrintTable(params)
+					},
+					// Called when the tank takes damage, after the damage is dealt
+					// Params as in https://wiki.alliedmods.net/Team_Fortress_2_Events#player_hurt:~:text=level-,npc_hurt,-Name%3A
+					OnTakeDamagePost = function(tank, params) {
+						ClientPrint(null, 2, `OnTakeDamagePostTank`)
+						PrintTable(params)
+					},
+				})
+			"
+		}
+
 		WaveSpawn
 		{
 			Name "Wave2"
