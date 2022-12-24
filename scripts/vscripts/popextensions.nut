@@ -1,8 +1,8 @@
-for (local ent = null; (ent = Entities.FindByName(ent, "pop_extension_ent")) != null;) {
-	printl("find");
-	ent.Kill();
+popExtEntity <- Entities.FindByName(null, "pop_extension_ent");
+
+if (popExtEntity == null) {
+	popExtEntity <- SpawnEntityFromTable("move_rope", {targetname = "pop_extension_ent", vscripts="popextensions_hooks"});
 }
-popExtEntity <- SpawnEntityFromTable("point_teleport", {targetname = "pop_extension_ent", vscripts="popextensions_hooks"});
 
 popExtEntity.ValidateScriptScope();
 popExtScope <- popExtEntity.GetScriptScope();
@@ -14,7 +14,7 @@ popExtThinkFuncSet <- false;
 AddThinkToEnt(popExtEntity, null);
 
 // Sets parent immediately in a dirty way. Does not retain absolute origin, retains local origin instead
-::SetParentDirty <- function(child, parent, attachment = null)
+::SetParentLocalOrigin <- function(child, parent, attachment = null)
 {
 	NetProps.SetPropEntity(child, "m_hMovePeer", parent.FirstMoveChild());
 	NetProps.SetPropEntity(parent, "m_hMoveChild", child);
@@ -31,13 +31,45 @@ AddThinkToEnt(popExtEntity, null);
 
 	EntFireByHandle(child, "SetParent", "!activator", 0, parent, parent);
 	if (attachment != null) {
-		NetProps.SetPropEntity(child, "m_iParentAttachment", LookupAttachment(attachment));
+		NetProps.SetPropEntity(child, "m_iParentAttachment", parent.LookupAttachment(attachment));
 		EntFireByHandle(child, "SetParentAttachmentMaintainOffset", attachment, 0, parent, parent);
 	}
 }
 
+// Make a wearable that is attached to the player. The wearable is automatically removed when the owner is killed or respawned
+::CreatePlayerWearable <- function(player, model, bonemerge = true, attachment = null, autoDestroy = true)
+{
+	local wearable = Entities.CreateByClassname("tf_wearable");
+	NetProps.SetPropInt(wearable, "m_nModelIndex", PrecacheModel(model));
+	wearable.SetSkin(player.GetTeam());
+	wearable.SetTeam(player.GetTeam());
+	wearable.SetSolidFlags(4);
+	wearable.SetCollisionGroup(11);
+	NetProps.SetPropBool(wearable, "m_bValidatedAttachedEntity", true);
+	NetProps.SetPropBool(wearable, "m_AttributeManager.m_Item.m_bInitialized", true);
+	NetProps.SetPropInt(wearable, "m_AttributeManager.m_Item.m_iEntityQuality", 0);
+	NetProps.SetPropInt(wearable, "m_AttributeManager.m_Item.m_iEntityLevel", 1);
+	NetProps.SetPropInt(wearable, "m_AttributeManager.m_Item.m_iItemIDLow", 2048);
+	NetProps.SetPropInt(wearable, "m_AttributeManager.m_Item.m_iItemIDHigh", 0);
+
+	wearable.SetOwner(player);
+	Entities.DispatchSpawn(wearable);
+	NetProps.SetPropInt(wearable, "m_fEffects", bonemerge ? 129 : 0);
+	SetParentLocalOrigin(wearable, player, attachment);
+	player.ValidateScriptScope();
+	local scope = player.GetScriptScope();
+	if (autoDestroy) {
+		if (!("popWearablesToDestroy" in scope)) {
+			scope.popWearablesToDestroy <- [];
+		}
+		scope.popWearablesToDestroy.append(wearable);
+	}
+	return wearable;
+}
+
 ::PrintTable <- function (table)
 {
+	if (table == null) return;
 	DoPrintTable(table, 0);
 }
 ::DoPrintTable <- function (table, indent)
@@ -81,8 +113,8 @@ AddThinkToEnt(popExtEntity, null);
 
 function init()
 {
-	ClientPrint(null, 2 "init");
 	if ("robotTags" in initTable && initTable.robotTags.len() > 0) {
+		AddThinkToEnt(popExtEntity, "PopulatorThink");
 		popExtScope.robotTags = initTable.robotTags;
 	}
 	if ("tankNames" in initTable && initTable.tankNames.len() > 0) {
@@ -99,7 +131,6 @@ function AddRobotTag(tag, table)
 		AddThinkToEnt(popExtEntity, "PopulatorThink");
 		popExtThinkFuncSet = true;
 	}
-	ClientPrint(null, 2 "add robot tag");
 	popExtScope.robotTags[tag] <- table;
 }
 

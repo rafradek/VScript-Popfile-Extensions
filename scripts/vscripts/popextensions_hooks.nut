@@ -1,5 +1,3 @@
-ClearGameEventCallbacks();
-
 function AddHooksToScope(name, table, scope)
 {
 	foreach (hookName, func in table) {
@@ -33,7 +31,6 @@ function FireHooksParam(entity, scope, name, param) {
 
 function PopulatorThink()
 {
-	//ClientPrint(null, 2 "pop think");
 	for (local tank = null; (tank = Entities.FindByClassname(tank, "tank_boss")) != null;) {
 		tank.ValidateScriptScope();
 		local scope = tank.GetScriptScope();
@@ -63,19 +60,30 @@ function PopulatorThink()
 	{
 		local player = PlayerInstanceFromIndex(i);
 		if (player == null) continue;
-		if (player.IsBotOfType(1337) && NetProps.GetPropInt(player, "m_lifeState") == 0) {
+		if (player.IsBotOfType(1337)) {
 			player.ValidateScriptScope();
 			local scope = player.GetScriptScope();
-			if (!("botCreated" in scope)) {
+			local alive = NetProps.GetPropInt(player, "m_lifeState") == 0;
+			if (alive && !("botCreated" in scope)) {
 				scope.botCreated <- true;
 				foreach (tag, table in robotTags) {
 					if (player.HasBotTag(tag)) {
+						scope.popFiredDeathHook <- false;
 						AddHooksToScope(tag, table, scope);
 						if ("OnSpawn" in table) {
 							table.OnSpawn(player, tag);
 						}
 					}
 				}
+			}
+			// Make sure that ondeath hook is fired always
+			if (!alive && "popFiredDeathHook" in scope) {
+				local scope = player.GetScriptScope();
+				if (!scope.popFiredDeathHook) {
+					printl("Print death2");
+					FireHooksParam(player, scope, "OnDeath", null);
+				}
+				delete scope.popFiredDeathHook;
 			}
 		}
 	}
@@ -98,10 +106,29 @@ function OnScriptHook_OnTakeDamage(params)
 
 function OnGameEvent_player_spawn(params)
 {
+	printl("playerspawn "+ self.IsValid())
 	local player = GetPlayerFromUserID(params.userid);
+
+	if (player.GetScriptScope() != null && "popWearablesToDestroy" in player.GetScriptScope()) {
+		foreach(i, wearable in player.GetScriptScope().popWearablesToDestroy) {
+			if (wearable.IsValid()) {
+				wearable.Kill();
+			}
+		}
+		delete player.GetScriptScope().popWearablesToDestroy;
+	}
+
 	if (player != null && player.IsBotOfType(1337)) {
 		player.ValidateScriptScope();
 		local scope = player.GetScriptScope();
+
+		if ("popFiredDeathHook" in scope) {
+			if (!scope.popFiredDeathHook) {
+				FireHooksParam(player, scope, "OnDeath", null);
+			}
+			delete scope.popFiredDeathHook;
+		}
+
 		// Reset hooks
 		if ("botCreated" in scope) {
 			delete scope.botCreated;
@@ -131,12 +158,22 @@ function OnGameEvent_player_death(params)
 	local player = GetPlayerFromUserID(params.userid);
 	if (player != null && player.IsBotOfType(1337)) {
 		local scope = player.GetScriptScope();
+		scope.popFiredDeathHook <- true;
 		FireHooksParam(player, scope, "OnDeath", params);
 	}
 	local attacker = GetPlayerFromUserID(params.attacker);
 	if (attacker != null && attacker.IsBotOfType(1337)) {
 		local scope = attacker.GetScriptScope();
 		FireHooksParam(attacker, scope, "OnKill", params);
+	}
+
+	if (player.GetScriptScope() != null && "popWearablesToDestroy" in player.GetScriptScope()) {
+		foreach(i, wearable in player.GetScriptScope().popWearablesToDestroy) {
+			if (wearable.IsValid()) {
+				wearable.Kill();
+			}
+		}
+		delete player.GetScriptScope().popWearablesToDestroy;
 	}
 }
 
