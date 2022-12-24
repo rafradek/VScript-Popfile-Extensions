@@ -140,7 +140,11 @@ WaveSchedule
 					OnSpawn = function(tank, name) {
 						// Create a prop on top of the tank
 						local prop = SpawnEntityFromTable(`prop_dynamic`, {model = `models/props_badlands/barrel01.mdl`, origin = `0 0 200`})
-						SetParentLocalOrigin(prop, tank)
+
+						// Create an ignite trigger
+						local trigger = SpawnEntityFromTable(`trigger_ignite`, {origin = `0 0 100`, spawnflags = `1`})
+						SetupTriggerBounds(trigger, Vector(-200,-200,-200), Vector(200,200,200))
+						SetParentLocalOrigin([prop, trigger], tank)
 
 						ClientPrint(null, 2, `OnSpawnTank`)
 						tank.KeyValueFromString(`rendercolor`, `255 0 0`)
@@ -209,10 +213,14 @@ WaveSchedule
 // Functions provided by popextensions:
 
 // Sets parent immediately in a dirty way. Does not retain absolute origin, retains local origin instead
-// void SetParentLocalOrigin(handle child, handle parent, string attachment = null)
+// child parameter may also be an array of entities
+// void SetParentLocalOrigin(handle|array child, handle parent, string attachment = null)
 
 // Make a wearable prop that is attached to the player. The wearable is automatically removed when the owner is killed or respawned
 // handle CreatePlayerWearable(handle player, string model, bool bonemerge = true, string attachment = null, bool autoDestroy = true)
+
+// Setup collision bounds of a trigger entity
+// handle SetupTriggerBounds(handle trigger, Vector mins = null, Vector maxs = null)
 
 // Prints a table to client console
 // void PrintTable(table|array table)

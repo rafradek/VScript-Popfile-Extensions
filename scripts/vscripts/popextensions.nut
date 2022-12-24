@@ -13,8 +13,7 @@ popExtScope.tankNamesWildcard <- {};
 popExtThinkFuncSet <- false;
 AddThinkToEnt(popExtEntity, null);
 
-// Sets parent immediately in a dirty way. Does not retain absolute origin, retains local origin instead
-::SetParentLocalOrigin <- function(child, parent, attachment = null)
+::SetParentLocalOriginDo <- function(child, parent, attachment = null)
 {
 	NetProps.SetPropEntity(child, "m_hMovePeer", parent.FirstMoveChild());
 	NetProps.SetPropEntity(parent, "m_hMoveChild", child);
@@ -35,12 +34,29 @@ AddThinkToEnt(popExtEntity, null);
 		EntFireByHandle(child, "SetParentAttachmentMaintainOffset", attachment, 0, parent, parent);
 	}
 }
+// Sets parent immediately in a dirty way. Does not retain absolute origin, retains local origin instead.
+// child parameter may also be an array of entities
+::SetParentLocalOrigin <- function(child, parent, attachment = null)
+{
+	if (typeof child == "array") {
+		foreach(i, childIn in child) {
+			SetParentLocalOriginDo(childIn, parent, attachment)
+		}
+	}
+	else {
+		SetParentLocalOriginDo(child, parent, attachment)
+	}
+}
 
 // Make a wearable that is attached to the player. The wearable is automatically removed when the owner is killed or respawned
 ::CreatePlayerWearable <- function(player, model, bonemerge = true, attachment = null, autoDestroy = true)
 {
+	local modelIndex = GetModelIndex(model);
+	if (modelIndex == -1) {
+		modelIndex = PrecacheModel(model);
+	}
 	local wearable = Entities.CreateByClassname("tf_wearable");
-	NetProps.SetPropInt(wearable, "m_nModelIndex", PrecacheModel(model));
+	NetProps.SetPropInt(wearable, "m_nModelIndex", modelIndex);
 	wearable.SetSkin(player.GetTeam());
 	wearable.SetTeam(player.GetTeam());
 	wearable.SetSolidFlags(4);
@@ -65,6 +81,22 @@ AddThinkToEnt(popExtEntity, null);
 		scope.popWearablesToDestroy.append(wearable);
 	}
 	return wearable;
+}
+
+PrecacheModel("models/weapons/w_models/w_rocket.mdl");
+// Setup collision bounds of a trigger entity
+::SetupTriggerBounds <- function(trigger, mins = null, maxs = null)
+{
+	trigger.SetModel("models/weapons/w_models/w_rocket.mdl");
+	if (mins != null) {
+		NetProps.SetPropVector(trigger, "m_Collision.m_vecMinsPreScaled", mins);
+		NetProps.SetPropVector(trigger, "m_Collision.m_vecMins", mins);
+	}
+	if (maxs != null) {
+		NetProps.SetPropVector(trigger, "m_Collision.m_vecMaxsPreScaled", maxs);
+		NetProps.SetPropVector(trigger, "m_Collision.m_vecMaxs", maxs);
+	}
+	trigger.SetSolid(Constants.ESolidType.SOLID_BBOX);
 }
 
 ::PrintTable <- function (table)
