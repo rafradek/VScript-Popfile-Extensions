@@ -106,7 +106,6 @@ function OnScriptHook_OnTakeDamage(params)
 
 function OnGameEvent_player_spawn(params)
 {
-	printl("playerspawn "+ self.IsValid())
 	local player = GetPlayerFromUserID(params.userid);
 
 	if (player.GetScriptScope() != null && "popWearablesToDestroy" in player.GetScriptScope()) {
