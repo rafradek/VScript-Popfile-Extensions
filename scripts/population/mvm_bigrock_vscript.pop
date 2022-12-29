@@ -126,16 +126,13 @@ WaveSchedule
 				// Load popextensions script
 				IncludeScript(`popextensions`)
 
-				// Set custom wave icons inside this function
-				SetWaveIconsFunction(function() {
-					// Use custom icon for a tank, first remove the regular tank icon
-					DecrementWaveIconSpawnCount(`tank`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 4, false)
-					// Add our custom tank icon
-					IncrementWaveIconSpawnCount(`tank_sticky_hellmet`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 4, false)
-				})
+				// Add custom tank icon, uses crit outline and white background
+				AddCustomTankIcon(`tank_sticky_hellmet`, 3, true, false, false, false)
 
 				// Add event hooks for tanks with specifed Name, also supports wildcard suffix
 				AddTankName(`abc*`, {
+					// Use custom tank icon
+					Icon = { name = `tank_sticky_hellmet`, isCrit = true, isBoss = false},
 					// Called when the tank is spawned
 					OnSpawn = function(tank, name) {
 						// Create a prop on top of the tank
@@ -154,12 +151,6 @@ WaveSchedule
 					OnDeath = function(tank, params) {
 						ClientPrint(null, 2, `OnDeathTank`)
 						PrintTable(params)
-						if (GetWaveIconSpawnCount(`tank`,  MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL) > 0) {
-							// Compensate for the decreasing of normal tank icon
-							IncrementWaveIconSpawnCount(`tank`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1, false);
-						}
-						// Decrement custom tank icon when killed.
-						DecrementWaveIconSpawnCount(`tank_sticky_hellmet`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1, false);
 					},
 					// Called when the tank takes damage
 					// Non const prefixed params when altered will affect the damage taken
@@ -181,7 +172,7 @@ WaveSchedule
 		WaveSpawn
 		{
 			Name "Wave2"
-			TotalCount 1
+			TotalCount 3
 			TotalCurrency 0
 
 			FirstSpawnOutput
@@ -235,7 +226,13 @@ WaveSchedule
 // Adds hooks to tanks with specified Name. Wildcard * suffix is supported
 // void AddTankName(string name, table hooks)
 
-// Custom wavebar icons should be added in the function in the param
+// Add custom tank icon to the wavebar, should be called in WaveInitOutput
+// void AddCustomTankIcon(string name, int count, bool isCrit = false, bool isBoss = true, bool isSupport = false, bool isSupportLimited = false)
+
+// Add custom icon to the wavebar, should be called in WaveInitOutput
+// void AddCustomIcon(string name, int count, bool isCrit = false, bool isBoss = false, bool isSupport = false, bool isSupportLimited = false)
+
+// If you want to use IncrementWaveIconSpawnCount functions to add icons to the wavebar, use this function
 // void SetWaveIconsFunction(function func)
 
 // Flags for use in wavebar functions below. Joinable with | operator

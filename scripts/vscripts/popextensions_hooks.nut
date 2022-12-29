@@ -11,6 +11,12 @@ function AddHooksToScope(name, table, scope)
 			}
 			scope.popHooks[hookName].append(func);
 		}
+		else {
+			if (!("popProperty" in scope)) {
+				scope["popProperty"] <- {};
+			}
+			scope.popProperty[hookName] <- func;
+		}
 	}
 }
 function FireHooks(entity, scope, name) {
@@ -184,16 +190,51 @@ function OnGameEvent_npc_hurt(params)
 		local dead = (victim.GetHealth() - params.damageamount) <= 0;
 
 		FireHooksParam(victim, scope, "OnTakeDamagePost", params);
-		if (dead) {
+
+		if (dead && !("popFiredDeathHook" in scope)) {
+			scope.popFiredDeathHook <- true;
+			if ("popProperty" in scope && "Icon" in scope.popProperty) {
+				local icon = scope.popProperty.Icon;
+				local flags = MVM_CLASS_FLAG_NORMAL;
+				if (!("isBoss" in icon) || icon.isBoss) {
+					flags= flags | MVM_CLASS_FLAG_MINIBOSS;
+				}
+				if ("isCrit" in icon && icon.isCrit) {
+					flags= flags | MVM_CLASS_FLAG_ALWAYSCRIT;
+				}
+				if (GetWaveIconSpawnCount("tank",  MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL) > 0 && GetWaveIconSpawnCount(icon.name, flags) > 0) {
+					// Compensate for the decreasing of normal tank icon
+					IncrementWaveIconSpawnCount("tank", MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1, false);
+				}
+				// Decrement custom tank icon when killed.
+				DecrementWaveIconSpawnCount(icon.name, flags, 1, false);
+			}
+
+
 			FireHooksParam(victim, scope, "OnDeath", params);
 		}
 	}
 }
-
+tankIcons <- [];
+icons <- [];
 function OnGameEvent_mvm_begin_wave(params)
 {
 	if ("waveIconsFunction" in this) {
 		this.waveIconsFunction();
 	}
+	foreach (i,v in tankIcons) {
+		_PopIncrementTankIcon(v);
+	}
+	foreach (i,v in icons) {
+		_PopIncrementIcon(v);
+	}
+}
+function OnGameEvent_teamplay_round_start(params)
+{
+	if ("waveIconsFunction" in this) {
+		delete waveIconsFunction;
+	}
+	tankIcons <- [];
+	icons <- [];
 }
 __CollectGameEventCallbacks(this);

@@ -1,4 +1,4 @@
-::popExtensionsVersion <- 2;
+::popExtensionsVersion <- 3;
 popExtEntity <- Entities.FindByName(null, "pop_extension_ent");
 
 if (popExtEntity == null) {
@@ -172,6 +172,55 @@ function AddTankName(name, table)
 	}
 }
 
+::_PopIncrementTankIcon <- function(icon) {
+	local flags = MVM_CLASS_FLAG_NORMAL;
+	if (icon.isCrit) {
+		flags = flags | MVM_CLASS_FLAG_ALWAYSCRIT;
+	}
+	if (icon.isBoss) {
+		flags = flags | MVM_CLASS_FLAG_MINIBOSS;
+	}
+	if (icon.isSupport) {
+		flags = flags | MVM_CLASS_FLAG_SUPPORT;
+	}
+	if (icon.isSupportLimited) {
+		flags = flags | MVM_CLASS_FLAG_SUPPORT_LIMITED;
+	}
+	DecrementWaveIconSpawnCount("tank", MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS | (icon.isSupport ? MVM_CLASS_FLAG_SUPPORT : 0) | (icon.isSupportLimited ? MVM_CLASS_FLAG_SUPPORT_LIMITED : 0), icon.count, false);
+	IncrementWaveIconSpawnCount(icon.name, flags, icon.count, false);
+}
+
+::_PopIncrementIcon <- function(icon) {
+	local flags = MVM_CLASS_FLAG_NORMAL;
+	if (icon.isCrit) {
+		flags = flags | MVM_CLASS_FLAG_ALWAYSCRIT;
+	}
+	if (icon.isBoss) {
+		flags = flags | MVM_CLASS_FLAG_MINIBOSS;
+	}
+	if (icon.isSupport) {
+		flags = flags | MVM_CLASS_FLAG_SUPPORT;
+	}
+	if (icon.isSupportLimited) {
+		flags = flags | MVM_CLASS_FLAG_SUPPORT_LIMITED;
+	}
+	IncrementWaveIconSpawnCount(icon.name, flags, icon.count, true);
+}
+
+function AddCustomTankIcon(name, count, isCrit = false, isBoss = true, isSupport = false, isSupportLimited = false)
+{
+	local icon = {name = name, count = count, isCrit = isCrit, isBoss = isBoss, isSupport = isSupport, isSupportLimited = isSupportLimited};
+	popExtScope.tankIcons.append(icon);
+	_PopIncrementTankIcon(icon);
+}
+
+function AddCustomIcon(name, count, isCrit = false, isBoss = false, isSupport = false, isSupportLimited = false)
+{
+	local icon = {name = name, count = count, isCrit = isCrit, isBoss = isBoss, isSupport = isSupport, isSupportLimited = isSupportLimited};
+	popExtScope.icons.append(icon);
+	_PopIncrementIcon(icon);
+}
+
 function SetWaveIconsFunction(func)
 {
 	popExtScope.waveIconsFunction <- func;
@@ -243,7 +292,6 @@ local resource = Entities.FindByClassname(null, "tf_objective_resource");
 		}
 	}
 }
-
 // Increment wavebar spawn count of an icon with specified name and flags
 // Can be used to put custom icons on a wavebar
 ::IncrementWaveIconSpawnCount <- function(name, flags, count = 1, changeMaxEnemyCount = true)
