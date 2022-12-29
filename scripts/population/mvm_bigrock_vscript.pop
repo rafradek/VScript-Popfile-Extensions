@@ -129,9 +129,9 @@ WaveSchedule
 				// Set custom wave icons inside this function
 				SetWaveIconsFunction(function() {
 					// Use custom icon for a tank, first remove the regular tank icon
-					SetWaveIconSpawnCount(`tank`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 0)
+					DecrementWaveIconSpawnCount(`tank`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 4, false)
 					// Add our custom tank icon
-					SetWaveIconSpawnCount(`tank_red`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1)
+					IncrementWaveIconSpawnCount(`tank_sticky_hellmet`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 4, false)
 				})
 
 				// Add event hooks for tanks with specifed Name, also supports wildcard suffix
@@ -154,8 +154,12 @@ WaveSchedule
 					OnDeath = function(tank, params) {
 						ClientPrint(null, 2, `OnDeathTank`)
 						PrintTable(params)
+						if (GetWaveIconSpawnCount(`tank`,  MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL) > 0) {
+							// Compensate for the decreasing of normal tank icon
+							IncrementWaveIconSpawnCount(`tank`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1, false);
+						}
 						// Decrement custom tank icon when killed.
-						DecrementWaveIconSpawnCount(`tank_red`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1)
+						DecrementWaveIconSpawnCount(`tank_sticky_hellmet`, MVM_CLASS_FLAG_MINIBOSS | MVM_CLASS_FLAG_NORMAL, 1, false);
 					},
 					// Called when the tank takes damage
 					// Non const prefixed params when altered will affect the damage taken
@@ -249,15 +253,15 @@ WaveSchedule
 // Set wavebar spawn count of an icon with specified name and flags
 // If count is set to 0, removes the icon from the wavebar
 // Can be used to put custom icons on a wavebar
-// void SetWaveIconSpawnCount(string name, int flags, int count)
+// void SetWaveIconSpawnCount(string name, int flags, int count = 1, bool changeMaxEnemyCount = true)
 
 // Increment wavebar spawn count of an icon with specified name and flags
 // Can be used to put custom icons on a wavebar
-// void IncrementWaveIconSpawnCount(string name, int flags, int count)
+// void IncrementWaveIconSpawnCount(string name, int flags, int count = 1, bool changeMaxEnemyCount = true)
 
 // Increment wavebar spawn count of an icon with specified name and flags
 // Use it to decrement the spawn count when the enemy is killed. Should not be used for support type icons
-// void DecrementWaveIconSpawnCount(string name, int flags, int count)
+// void DecrementWaveIconSpawnCount(string name, int flags, int count = 1, bool changeMaxEnemyCount = false)
 
 // Used for mission and support limited bots to display them on a wavebar during the wave, set by the game automatically when an enemy with this icon spawn
 // void SetWaveIconActive(string name, int flags, bool active)

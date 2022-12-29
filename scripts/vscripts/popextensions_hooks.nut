@@ -36,7 +36,7 @@ function PopulatorThink()
 		local scope = tank.GetScriptScope();
 		if (!("created" in scope)) {
 			scope.created <- true;
-			local tankName = tank.GetName();
+			local tankName = tank.GetName().tolower();
 			foreach (name, table in tankNamesWildcard) {
 				if (name == tankName || name == tankName.slice(0, name.len())) {
 					AddHooksToScope(tankName, table, scope);

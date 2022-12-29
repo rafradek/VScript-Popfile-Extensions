@@ -1,3 +1,4 @@
+::popExtensionsVersion <- 2;
 popExtEntity <- Entities.FindByName(null, "pop_extension_ent");
 
 if (popExtEntity == null) {
@@ -143,18 +144,6 @@ PrecacheModel("models/weapons/w_models/w_rocket.mdl");
 	ClientPrint(null, 2, line);
 }
 
-function init()
-{
-	if ("robotTags" in initTable && initTable.robotTags.len() > 0) {
-		AddThinkToEnt(popExtEntity, "PopulatorThink");
-		popExtScope.robotTags = initTable.robotTags;
-	}
-	if ("tankNames" in initTable && initTable.tankNames.len() > 0) {
-		AddThinkToEnt(popExtEntity, "PopulatorThink");
-		popExtScope.tankNames = initTable.tankNames;
-	}
-}
-
 local objective = Entities.FindByClassname(null,"tf_objective_resource");
 
 function AddRobotTag(tag, table)
@@ -172,7 +161,7 @@ function AddTankName(name, table)
 		AddThinkToEnt(popExtEntity, "PopulatorThink");
 		popExtThinkFuncSet = true;
 	}
-
+	name = name.tolower();
 	local wildcard = name[name.len()-1] == '*';
 	if (wildcard) {
 		name = name.slice(0, name.len()-1);
@@ -205,19 +194,14 @@ local resource = Entities.FindByClassname(null, "tf_objective_resource");
 ::GetWaveIconSpawnCount <- function(name, flags)
 {
 	local sizeArray = NetProps.GetPropArraySize(resource, "m_nMannVsMachineWaveClassCounts");
+	for (local a = 0; a < 2; a++) {
+		local suffix = a == 0 ? "" : "2";
+		for (local i = 0; i < sizeArray * 2; i++) {
+			if (NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, i) == name &&
+				(flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, i) == flags)) {
 
-	for (local i = 0; i < sizeArray; i++) {
-		if (NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", i) == name &&
-			(flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", i) == flags)) {
-
-			return NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts", i);
-		}
-	}
-	for (local i = 0; i < sizeArray; i++) {
-		if (NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", i) == name &&
-			(flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", i) == flags)) {
-
-			return NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts2", i);
+				return NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts" + suffix, i);
+			}
 		}
 	}
 	return 0;
@@ -226,101 +210,71 @@ local resource = Entities.FindByClassname(null, "tf_objective_resource");
 // Set wavebar spawn count of an icon with specified name and flags
 // If count is set to 0, removes the icon from the wavebar
 // Can be used to put custom icons on a wavebar
-::SetWaveIconSpawnCount <- function(name, flags, count)
+::SetWaveIconSpawnCount <- function(name, flags, count, changeMaxEnemyCount = true)
 {
 	local sizeArray = NetProps.GetPropArraySize(resource, "m_nMannVsMachineWaveClassCounts");
 
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", i);
-		if (nameSlot == "" && count > 0) {
-			NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", name, i);
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts", count, i);
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", flags, i);
-			if (flags & (MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS)) {
-				NetProps.SetPropInt(resource, "m_nMannVsMachineWaveEnemyCount", NetProps.GetPropInt(resource, "m_nMannVsMachineWaveEnemyCount") + count);
+	for (local a = 0; a < 2; a++) {
+		local suffix = a == 0 ? "" : "2";
+		for (local i = 0; i < sizeArray; i++) {
+			local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, i);
+			if (nameSlot == "" && count > 0) {
+				NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, name, i);
+				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts" + suffix, count, i);
+				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, flags, i);
+				if (changeMaxEnemyCount && (flags & (MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS))) {
+					NetProps.SetPropInt(resource, "m_nMannVsMachineWaveEnemyCount", NetProps.GetPropInt(resource, "m_nMannVsMachineWaveEnemyCount") + count);
+				}
+				return;
 			}
-			return;
-		}
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", i) == flags)) {
-			local preCount = NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts", i)
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts", count, i);
-			if (flags & (MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS)) {
-				NetProps.SetPropInt(resource, "m_nMannVsMachineWaveEnemyCount", NetProps.GetPropInt(resource, "m_nMannVsMachineWaveEnemyCount") + count - preCount);
+			if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, i) == flags)) {
+				local preCount = NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts" + suffix, i)
+				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts" + suffix, count, i);
+				if (changeMaxEnemyCount && (flags & (MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS))) {
+					NetProps.SetPropInt(resource, "m_nMannVsMachineWaveEnemyCount", NetProps.GetPropInt(resource, "m_nMannVsMachineWaveEnemyCount") + count - preCount);
+				}
+				if (count <= 0) {
+					NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, "", i);
+					NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, 0, i);
+					NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive" + suffix, false, i);
+				}
+				return;
 			}
-			if (count <= 0) {
-				NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", "", i);
-				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", 0, i);
-				NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive", false, i);
-			}
-			return;
-		}
-	}
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", i);
-		if (nameSlot == "" && count > 0) {
-			nameSlot = name;
-			NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", name, i);
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts2", count, i);
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags2", flags, i);
-			if (flags & (MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS)) {
-				NetProps.SetPropInt(resource, "m_nMannVsMachineWaveEnemyCount2", NetProps.GetPropInt(resource, "m_nMannVsMachineWaveEnemyCount2") + count);
-			}
-			return;
-		}
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags2", i) == flags)) {
-			local preCount = NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts2", i)
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts2", count, i);
-			if (flags & (MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS)) {
-				NetProps.SetPropInt(resource, "m_nMannVsMachineWaveEnemyCount2", NetProps.GetPropInt(resource, "m_nMannVsMachineWaveEnemyCount2") + count - preCount);
-			}
-			if (count <= 0) {
-				NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", "", i);
-				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags2", 0, i);
-				NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive2", false, i);
-			}
-			return;
 		}
 	}
 }
 
 // Increment wavebar spawn count of an icon with specified name and flags
 // Can be used to put custom icons on a wavebar
-::IncrementWaveIconSpawnCount <- function(name, flags, count)
+::IncrementWaveIconSpawnCount <- function(name, flags, count = 1, changeMaxEnemyCount = true)
 {
-	SetWaveIconSpawnCount(name, flags, GetWaveIconSpawnCount(name, flags) + count);
+	SetWaveIconSpawnCount(name, flags, GetWaveIconSpawnCount(name, flags) + count, changeMaxEnemyCount);
 	return 0;
 }
 
 // Increment wavebar spawn count of an icon with specified name and flags
 // Use it to decrement the spawn count when the enemy is killed. Should not be used for support type icons
-::DecrementWaveIconSpawnCount <- function(name, flags, count)
+::DecrementWaveIconSpawnCount <- function(name, flags, count = 1, changeMaxEnemyCount = false)
 {
 	local sizeArray = NetProps.GetPropArraySize(resource, "m_nMannVsMachineWaveClassCounts");
 
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", i);
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", i) == flags)) {
-			local preCount = NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts", i)
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts", preCount - count > 0 ? preCount - count : 0, i);
-			if (preCount - count <= 0) {
-				NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", "", i);
-				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", 0, i);
-				NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive", false, i);
+	for (local a = 0; a < 2; a++) {
+		local suffix = a == 0 ? "" : "2";
+		for (local i = 0; i < sizeArray; i++) {
+			local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, i);
+			if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, i) == flags)) {
+				local preCount = NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts" + suffix, i)
+				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts" + suffix, preCount - count > 0 ? preCount - count : 0, i);
+				if (changeMaxEnemyCount && (flags & (MVM_CLASS_FLAG_NORMAL | MVM_CLASS_FLAG_MINIBOSS))) {
+					NetProps.SetPropInt(resource, "m_nMannVsMachineWaveEnemyCount", NetProps.GetPropInt(resource, "m_nMannVsMachineWaveEnemyCount") - (count > preCount ? preCount : count));
+				}
+				if (preCount - count <= 0) {
+					NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, "", i);
+					NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, 0, i);
+					NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive" + suffix, false, i);
+				}
+				return;
 			}
-			return;
-		}
-	}
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", i);
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags2", i) == flags)) {
-			local preCount = NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts2", i)
-			NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassCounts2", preCount - count > 0 ? preCount - count : 0, i);
-			if (preCount - count <= 0) {
-				NetProps.SetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", "", i);
-				NetProps.SetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags2", 0, i);
-				NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive", false, i);
-			}
-			return;
 		}
 	}
 	return 0;
@@ -329,18 +283,15 @@ local resource = Entities.FindByClassname(null, "tf_objective_resource");
 // Used for mission and support limited bots to display them on a wavebar during the wave, set by the game automatically when an enemy with this icon spawn
 ::SetWaveIconActive <- function(name, flags, active)
 {
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", i);
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", i) == flags)) {
-			NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive", active, i);
-			return;
-		}
-	}
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", i);
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags2", i) == flags)) {
-			NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive2", active, i);
-			return;
+	local sizeArray = NetProps.GetPropArraySize(resource, "m_nMannVsMachineWaveClassCounts");
+	for (local a = 0; a < 2; a++) {
+		local suffix = a == 0 ? "" : "2";
+		for (local i = 0; i < sizeArray; i++) {
+			local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, i);
+			if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, i) == flags)) {
+				NetProps.SetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive" + suffix, active, i);
+				return;
+			}
 		}
 	}
 }
@@ -348,16 +299,14 @@ local resource = Entities.FindByClassname(null, "tf_objective_resource");
 // Used for mission and support limited bots to display them on a wavebar during the wave, set by the game automatically when an enemy with this icon spawn
 ::GetWaveIconActive <- function(name, flags)
 {
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames", i);
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags", i) == flags)) {
-			return NetProps.GetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive", i);
-		}
-	}
-	for (local i = 0; i < sizeArray; i++) {
-		local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames2", i);
-		if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags2", i) == flags)) {
-			return NetProps.GetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive2", i);
+	local sizeArray = NetProps.GetPropArraySize(resource, "m_nMannVsMachineWaveClassCounts");
+	for (local a = 0; a < 2; a++) {
+		local suffix = a == 0 ? "" : "2";
+		for (local i = 0; i < sizeArray; i++) {
+			local nameSlot = NetProps.GetPropStringArray(resource, "m_iszMannVsMachineWaveClassNames" + suffix, i);
+			if (nameSlot == name && (flags == 0 || NetProps.GetPropIntArray(resource, "m_nMannVsMachineWaveClassFlags" + suffix, i) == flags)) {
+				return NetProps.GetPropBoolArray(resource, "m_bMannVsMachineWaveClassActive" + suffix, i);
+			}
 		}
 	}
 	return false;
