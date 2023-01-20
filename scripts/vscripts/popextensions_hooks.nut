@@ -16,6 +16,22 @@ function AddHooksToScope(name, table, scope)
 				scope["popProperty"] <- {};
 			}
 			scope.popProperty[hookName] <- func;
+			if (hookName == "TankModel") {
+				local tankModelNames = typeof func == "string" ? {} : func;
+				if (typeof func == "string") {
+					tankModelNames.Default <- func;
+					tankModelNames.Damage1 <- func;
+					tankModelNames.Damage2 <- func;
+					tankModelNames.Damage3 <- func;
+				}
+				scope.popProperty[hookName] <- tankModelNames;
+				local tankModelNamesPrecached = {}
+				foreach (k, v in tankModelNames) {
+					tankModelNamesPrecached[k] <- PrecacheModel(v);
+				}
+				scope.popProperty.TankModelPrecached <- tankModelNamesPrecached;
+
+			}
 		}
 	}
 }
@@ -59,6 +75,91 @@ function PopulatorThink()
 				if ("OnSpawn" in table) {
 					table.OnSpawn(tank, tankName);
 				}
+			}
+			if ("popProperty" in scope && "DisableTracks" in scope.popProperty && scope.popProperty.DisableTracks) {
+				for (local child = tank.FirstMoveChild(); child != null; child = child.NextMovePeer()) {
+					if (child.GetClassname() != "prop_dynamic") continue;
+					if (child.GetModelName() == "models/bots/boss_bot/tank_track_L.mdl" || child.GetModelName() == "models/bots/boss_bot/tank_track_R.mdl") {
+						NetProps.SetPropInt(child, "m_fEffects", NetProps.GetPropInt(child, "m_fEffects") | 32);
+					}
+				}
+			}
+			if ("popProperty" in scope && "DisableBomb" in scope.popProperty && scope.popProperty.DisableBomb) {
+				for (local child = tank.FirstMoveChild(); child != null; child = child.NextMovePeer()) {
+					if (child.GetClassname() != "prop_dynamic") continue;
+					if (child.GetModelName() == "models/bots/boss_bot/bomb_mechanism.mdl") {
+						NetProps.SetPropInt(child, "m_fEffects", NetProps.GetPropInt(child, "m_fEffects") | 32);
+					}
+				}
+			}
+			if ("popProperty" in scope && "TankModel" in scope.popProperty) {
+				if (!("TankModelVisionOnly" in scope.popProperty && scope.popProperty.TankModelVisionOnly)) {
+					tank.SetModelSimple(scope.popProperty.TankModel.Default);
+				}
+				NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached.Default, 0);
+				NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached.Default, 3);
+				for (local child = tank.FirstMoveChild(); child != null; child = child.NextMovePeer()) {
+					if (child.GetClassname() != "prop_dynamic") continue;
+
+					local replace_model = -1;
+					local replace_model_str = "";
+					local childModelName = child.GetModelName();
+					if ("Bomb" in scope.popProperty.TankModel && childModelName == "models/bots/boss_bot/bomb_mechanism.mdl") {
+						replace_model = scope.popProperty.TankModelPrecached.Bomb;
+						replace_model_str = scope.popProperty.TankModel.Bomb;
+					}
+					else if ("LeftTrack" in scope.popProperty.TankModel && childModelName == "models/bots/boss_bot/tank_track_L.mdl") {
+						replace_model = scope.popProperty.TankModelPrecached.LeftTrack;
+						replace_model_str = scope.popProperty.TankModel.LeftTrack;
+					}
+					else if ("RightTrack" in scope.popProperty.TankModel && childModelName == "models/bots/boss_bot/tank_track_R.mdl") {
+						replace_model = scope.popProperty.TankModelPrecached.RightTrack;
+						replace_model_str = scope.popProperty.TankModel.RightTrack;
+					}
+					if (replace_model != -1) {
+						child.SetModel(replace_model_str);
+						NetProps.SetPropIntArray(child, "m_nModelIndexOverrides", replace_model, 0);
+						NetProps.SetPropIntArray(child, "m_nModelIndexOverrides", replace_model, 3);
+					}
+				}
+			}
+		}
+		else {
+			if (!("lastHealth" in scope)) {
+				scope.lastHealth <- tank.GetHealth();
+				scope.lastHealthStage <- 0;
+			}
+			if (("changeTankModelIndex" in scope)) {
+				if (!("TankModelVisionOnly" in scope.popProperty && scope.popProperty.TankModelVisionOnly)) {
+					tank.SetModelSimple(scope.popProperty.TankModel[scope.changeTankModelIndex]);
+				}
+				NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached[scope.changeTankModelIndex], 0);
+				NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached[scope.changeTankModelIndex], 3);
+				delete scope.changeTankModelIndex;
+			}
+			if (scope.lastHealth != tank.GetHealth()) {
+				local health_per_model = tank.GetMaxHealth() / 4;
+				local health_threshold = tank.GetMaxHealth() - health_per_model;
+				local health_stage;
+
+				for (health_stage = 0; health_stage < 4; health_stage++) {
+					if (tank.GetHealth() > health_threshold)
+						break;
+
+					health_threshold -= health_per_model;
+				}
+				if (scope.lastHealthStage != health_stage && "popProperty" in scope && "TankModel" in scope.popProperty) {
+					local icon = scope.popProperty.Icon;
+					local name = health_stage == 0 ? "Default" : "Damage"+health_stage;
+					scope.changeTankModelIndex <- name;
+					if (!("TankModelVisionOnly" in scope.popProperty && scope.popProperty.TankModelVisionOnly)) {
+						tank.SetModelSimple(scope.popProperty.TankModel[name]);
+					}
+					NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached[name], 0);
+					NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached[name], 3);
+				}
+				print("Diff tank health "+ health_stage + " " +tank.GetModelName());
+				scope.lastHealth = tank.GetHealth();
 			}
 		}
 	}

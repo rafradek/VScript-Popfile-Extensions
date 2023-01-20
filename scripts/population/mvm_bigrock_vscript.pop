@@ -133,6 +133,20 @@ WaveSchedule
 				AddTankName(`abc*`, {
 					// Use custom tank icon
 					Icon = { name = `tank_sticky_hellmet`, isCrit = true, isBoss = false},
+
+					// Use custom tank model, can be either a string or a table of strings
+					// TankModel = `models/bots/boss_bot/boss_blimp.mdl`,
+					TankModel = {
+						Default = `models/bots/boss_bot/boss_blimp.mdl`,
+						Damage1 = `models/bots/boss_bot/boss_blimp_damage1.mdl`,
+						Damage2 = `models/bots/boss_bot/boss_blimp_damage2.mdl`,
+						Damage3 = `models/bots/boss_bot/boss_blimp_damage3.mdl`,
+						LeftTrack = `models/bots/boss_bot/tankred_track_l.mdl`,
+						RightTrack = `models/bots/boss_bot/tankred_track_r.mdl`,
+						Bomb = `models/bots/boss_bot/bombblue_mechanism.mdl`,
+					}
+					DisableTracks = true, // Disable track models
+					DisableBomb = true, // Disable bomb model
 					// Called when the tank is spawned
 					OnSpawn = function(tank, name) {
 						// Create a prop on top of the tank

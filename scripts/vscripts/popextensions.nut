@@ -1,4 +1,4 @@
-::popExtensionsVersion <- 3;
+::popExtensionsVersion <- 4;
 popExtEntity <- Entities.FindByName(null, "pop_extension_ent");
 
 if (popExtEntity == null) {
