@@ -126,6 +126,7 @@ WaveSchedule
 				// Load popextensions script
 				IncludeScript(`popextensions`)
 
+				// ALERT! The function below will crash linux servers, remove if the mission is played on them
 				// Add custom tank icon, uses crit outline and white background
 				AddCustomTankIcon(`tank_sticky_hellmet`, 3, true, false, false, false)
 
@@ -240,6 +241,7 @@ WaveSchedule
 // Adds hooks to tanks with specified Name. Wildcard * suffix is supported
 // void AddTankName(string name, table hooks)
 
+// ALERT! Functions that change wavebar icons will crash linux servers!
 // Add custom tank icon to the wavebar, should be called in WaveInitOutput
 // void AddCustomTankIcon(string name, int count, bool isCrit = false, bool isBoss = true, bool isSupport = false, bool isSupportLimited = false)
 
