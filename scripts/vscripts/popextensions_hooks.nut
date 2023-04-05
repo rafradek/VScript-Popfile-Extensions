@@ -149,7 +149,6 @@ function PopulatorThink()
 					health_threshold -= health_per_model;
 				}
 				if (scope.lastHealthStage != health_stage && "popProperty" in scope && "TankModel" in scope.popProperty) {
-					local icon = scope.popProperty.Icon;
 					local name = health_stage == 0 ? "Default" : "Damage"+health_stage;
 					scope.changeTankModelIndex <- name;
 					if (!("TankModelVisionOnly" in scope.popProperty && scope.popProperty.TankModelVisionOnly)) {
