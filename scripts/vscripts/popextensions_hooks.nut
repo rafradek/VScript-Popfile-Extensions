@@ -142,14 +142,14 @@ function PopulatorThink()
 				local health_threshold = tank.GetMaxHealth() - health_per_model;
 				local health_stage;
 
-				for (health_stage = 0; health_stage < 4; health_stage++) {
+				for (health_stage = 0; health_stage < 3; health_stage++) {
 					if (tank.GetHealth() > health_threshold)
 						break;
 
 					health_threshold -= health_per_model;
 				}
 				if (scope.lastHealthStage != health_stage && "popProperty" in scope && "TankModel" in scope.popProperty) {
-					local name = health_stage == 0 ? "Default" : "Damage"+health_stage;
+					local name = health_stage == 0 ? "Default" : "Damage" + health_stage;
 					scope.changeTankModelIndex <- name;
 					if (!("TankModelVisionOnly" in scope.popProperty && scope.popProperty.TankModelVisionOnly)) {
 						tank.SetModelSimple(scope.popProperty.TankModel[name]);
@@ -157,7 +157,6 @@ function PopulatorThink()
 					NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached[name], 0);
 					NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached[name], 3);
 				}
-				print("Diff tank health "+ health_stage + " " +tank.GetModelName());
 				scope.lastHealth = tank.GetHealth();
 			}
 		}
@@ -186,7 +185,6 @@ function PopulatorThink()
 			if (!alive && "popFiredDeathHook" in scope) {
 				local scope = player.GetScriptScope();
 				if (!scope.popFiredDeathHook) {
-					printl("Print death2");
 					FireHooksParam(player, scope, "OnDeath", null);
 				}
 				delete scope.popFiredDeathHook;
