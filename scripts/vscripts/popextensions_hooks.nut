@@ -158,6 +158,7 @@ function PopulatorThink()
 					NetProps.SetPropIntArray(tank, "m_nModelIndexOverrides", scope.popProperty.TankModelPrecached[name], 3);
 				}
 				scope.lastHealth = tank.GetHealth();
+				scope.lastHealthStage = health_stage;
 			}
 		}
 	}
